@@ -698,7 +698,10 @@ def run_diagnosis(facts: Dict[str, Any]) -> List[Dict[str, Any]]:
     Returns list of dicts with keys: id,name,confidence,evidence,remedy,matched_conditions
     """
     matches = []
+    # Treat rule with id==100 as a fallback default and don't match it in the main loop
     for r in RULES:
+        if r.get('id') == 100:
+            continue
         try:
             if _match_rule(r, facts):
                 matches.append({
