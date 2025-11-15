@@ -1,0 +1,96 @@
+{% extends 'support_app/base.html' %}
+{% load static %}
+{% block content %}
+<div class="container">
+  <div class="hero">
+    <div>
+      <div class="title">Diagnose Your Issue</div>
+      <div class="subtitle">Quickly collect device metrics and run a diagnosis to get actionable suggestions.</div>
+    </div>
+    <div class="small">Tip: fill the Advanced JSON for more detailed context</div>
+  </div>
+
+  <div class="card">
+    <form id="diagnose-form" method="post" action="{% url 'support_app:diagnose' %}">
+      {% csrf_token %}
+      <div class="grid">
+        <div class="form-field">{{ form.ping_latency.label_tag }} {{ form.ping_latency }}</div>
+        <div class="form-field">{{ form.speed_mbps.label_tag }} {{ form.speed_mbps }}</div>
+        <div class="form-field">{{ form.wifi_connected.label_tag }} {{ form.wifi_connected }}</div>
+        <div class="form-field">{{ form.ping_ip.label_tag }} {{ form.ping_ip }}</div>
+        <div class="form-field">{{ form.ping_domain.label_tag }} {{ form.ping_domain }}</div>
+        <div class="form-field">{{ form.gateway_ping.label_tag }} {{ form.gateway_ping }}</div>
+        <div class="form-field">{{ form.packet_loss.label_tag }} {{ form.packet_loss }}</div>
+        <div class="form-field">{{ form.rssi.label_tag }} {{ form.rssi }}</div>
+        <div class="form-field">{{ form.cpu_temp.label_tag }} {{ form.cpu_temp }}</div>
+        <div class="form-field">{{ form.idle_cpu.label_tag }} {{ form.idle_cpu }}</div>
+        <div class="form-field">{{ form.popups.label_tag }} {{ form.popups }}</div>
+        <div class="form-field">{{ form.disk_health.label_tag }} {{ form.disk_health }}</div>
+        <div class="form-field">{{ form.app_crash.label_tag }} {{ form.app_crash }}</div>
+        <div class="form-field">{{ form.ram_usage.label_tag }} {{ form.ram_usage }}</div>
+      </div>
+
+      <div style="margin-top:8px">
+        <label for="structured">Advanced (JSON input)</label>
+        {{ form.structured }}
+      </div>
+
+      <div class="actions">
+        <button id="run-btn" class="btn btn-primary" type="submit">
+          <span id="run-text">Run Diagnosis</span>
+          <span id="run-spinner" class="spinner" style="display:none;margin-left:6px"></span>
+        </button>
+        <button id="example-btn" class="btn btn-ghost" type="button">Load Example</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="results" class="card" style="display:none;">
+    <h2>Diagnosis Results</h2>
+    <div id="server-spinner" style="display:none;" class="small">Running… <span class="spinner" style="vertical-align:middle"></span></div>
+    <div id="result-cards"></div>
+  </div>
+</div>
+
+<script>
+  // small UX helpers for the Diagnose page
+  (function(){
+    var form = document.getElementById('diagnose-form');
+    var runBtn = document.getElementById('run-btn');
+    var runSpinner = document.getElementById('run-spinner');
+    var runText = document.getElementById('run-text');
+    var exampleBtn = document.getElementById('example-btn');
+    var structured = document.getElementById('id_structured');
+    var serverSpinner = document.getElementById('server-spinner');
+
+    if(form){
+      form.addEventListener('submit', function(e){
+        // show spinner and disable buttons to prevent double submit
+        runSpinner.style.display = 'inline-block';
+        runText.textContent = 'Running...';
+        runBtn.disabled = true;
+        serverSpinner.style.display = 'inline-block';
+      });
+    }
+
+    if(exampleBtn && structured){
+      exampleBtn.addEventListener('click', function(){
+        try{
+          var example = {
+            "ping_latency": 34,
+            "speed_mbps": 72.5,
+            "wifi_connected": true,
+            "packet_loss": 0,
+            "rssi": -55,
+            "cpu_temp": 58,
+            "ram_usage": 42
+          };
+          structured.value = JSON.stringify(example, null, 2);
+        }catch(err){
+          console.error(err);
+        }
+      });
+    }
+  })();
+</script>
+{% endblock %}

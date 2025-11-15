@@ -1,0 +1,26 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Smart Support — Expert System</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="{% static 'support_app/main.css' %}">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="container">
+      <h1><a href="{% url 'support_app:diagnose' %}">SmartSupport — IT Expert System</a></h1>
+    </div>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="container">
+    <p>SmartSupport — Expert System for Network & Computer Troubleshooting</p>
+  </footer>
+  <script src="{% static 'support_app/main.js' %}"></script>
+</body>
+</html>
