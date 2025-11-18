@@ -36,12 +36,25 @@ def _check_condition(facts: Dict[str, Any], cond: Dict[str, Any]) -> bool:
     if op not in _OPS:
         return False
     try:
+        # coerce simple numeric strings to numbers for comparison
+        if isinstance(fact_val, str) and isinstance(val, (int, float)):
+            try:
+                if '.' in fact_val:
+                    fact_val = float(fact_val)
+                else:
+                    fact_val = int(fact_val)
+            except Exception:
+                pass
         return _OPS[op](fact_val, val)
     except Exception:
         return False
 
 def _match_rule(rule: Dict[str, Any], facts: Dict[str, Any]) -> bool:
-    """All conditions must be true; supports 'any_of' groups if present."""
+    """
+    Legacy boolean matcher kept for compatibility. New scoring engine uses
+    evaluate_rule to compute partial matches. This returns True only when all
+    conditions match (same semantics as before).
+    """
     conds = rule.get('conditions', [])
     for c in conds:
         if not _check_condition(facts, c):
@@ -52,6 +65,72 @@ def _match_rule(rule: Dict[str, Any], facts: Dict[str, Any]) -> bool:
         if _check_condition(facts, c):
             return False
     return True
+
+
+def _normalize_confidence(c: Any) -> float:
+    """Normalize confidence into 0.0-1.0 range. Accepts percentages too."""
+    try:
+        cf = float(c)
+    except Exception:
+        return 0.5
+    if cf <= 0:
+        return 0.0
+    if cf > 1.0 and cf <= 100.0:
+        return cf / 100.0
+    if cf > 100.0:
+        return 1.0
+    return cf
+
+
+def evaluate_rule(rule: Dict[str, Any], facts: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Compute a weighted match score for a rule given facts.
+    Returns a dict with matched_conditions, unmatched_conditions, total_weight,
+    matched_weight and score (0..1 scaled by rule confidence).
+    Condition schema supports optional 'weight' (defaults to 1.0).
+    """
+    conds = rule.get('conditions', [])
+    total_weight = 0.0
+    matched_weight = 0.0
+    matched = []
+    unmatched = []
+    for c in conds:
+        w = float(c.get('weight', 1.0))
+        total_weight += w
+        ok = _check_condition(facts, c)
+        if ok:
+            matched_weight += w
+            matched.append(c)
+        else:
+            unmatched.append(c)
+    # negations: if any not_conditions match, penalize heavily (treat as full mismatch)
+    negs = rule.get('not_conditions', [])
+    neg_triggered = False
+    for c in negs:
+        if _check_condition(facts, c):
+            neg_triggered = True
+            break
+    if total_weight == 0:
+        match_ratio = 0.0
+    else:
+        match_ratio = matched_weight / total_weight
+    # apply negation: if any negation triggered, set ratio to 0
+    if neg_triggered:
+        match_ratio = 0.0
+
+    confidence = _normalize_confidence(rule.get('confidence', 0.5))
+    score = confidence * match_ratio
+
+    return {
+        'matched_conditions': matched,
+        'unmatched_conditions': unmatched,
+        'total_weight': total_weight,
+        'matched_weight': matched_weight,
+        'match_ratio': match_ratio,
+        'confidence': confidence,
+        'score': score,
+        'negation_triggered': neg_triggered,
+    }
 
 
 # ---------------------------
