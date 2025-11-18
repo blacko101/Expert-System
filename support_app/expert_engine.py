@@ -777,33 +777,53 @@ def run_diagnosis(facts: Dict[str, Any]) -> List[Dict[str, Any]]:
     Returns list of dicts with keys: id,name,confidence,evidence,remedy,matched_conditions
     """
     matches = []
-    # Treat rule with id==100 as a fallback default and don't match it in the main loop
+    # scoring threshold: return fallback only if no rule meets this score
+    SCORE_THRESHOLD = 0.25
+
     for r in RULES:
         if r.get('id') == 100:
             continue
         try:
-            if _match_rule(r, facts):
+            eval_res = evaluate_rule(r, facts)
+            # include rule if it has any positive score
+            if eval_res['score'] > 0:
                 matches.append({
-                    "id": r["id"],
-                    "name": r["name"],
-                    "confidence": r.get("confidence", 0.5),
-                    "evidence": r.get("evidence", ""),
-                    "remedy": r.get("remedy", ""),
+                    'id': r['id'],
+                    'name': r['name'],
+                    'confidence': eval_res['confidence'],
+                    'evidence': r.get('evidence', ''),
+                    'remedy': r.get('remedy', ''),
+                    'match_ratio': eval_res['match_ratio'],
+                    'score': eval_res['score'],
+                    'matched_conditions': eval_res['matched_conditions'],
+                    'unmatched_conditions': eval_res['unmatched_conditions'],
                 })
         except Exception:
             continue
-    # If no matches except rule 100, ensure we include rule 100
-    if not matches:
-        # Find rule 100
-        fallback = next((x for x in RULES if x["id"] == 100), None)
-        if fallback:
-            matches.append({
-                "id": fallback["id"],
-                "name": fallback["name"],
-                "confidence": fallback.get("confidence", 0.2),
-                "evidence": fallback.get("evidence", ""),
-                "remedy": fallback.get("remedy", ""),
-            })
-    # Sort by confidence desc
-    matches_sorted = sorted(matches, key=lambda x: x['confidence'], reverse=True)
-    return matches_sorted
+
+    # Filter matches above threshold and sort by score desc
+    matches_above = [m for m in matches if m.get('score', 0) >= SCORE_THRESHOLD]
+    if matches_above:
+        sorted_matches = sorted(matches_above, key=lambda x: x['score'], reverse=True)
+        return sorted_matches
+
+    # no rule met threshold: if there are lower-scoring matches, return top 3
+    if matches:
+        sorted_low = sorted(matches, key=lambda x: x['score'], reverse=True)[:3]
+        return sorted_low
+
+    # If truly no matches, return fallback rule 100
+    fallback = next((x for x in RULES if x['id'] == 100), None)
+    if fallback:
+        return [{
+            'id': fallback['id'],
+            'name': fallback['name'],
+            'confidence': _normalize_confidence(fallback.get('confidence', 0.2)),
+            'evidence': fallback.get('evidence', ''),
+            'remedy': fallback.get('remedy', ''),
+            'match_ratio': 0.0,
+            'score': 0.0,
+            'matched_conditions': [],
+            'unmatched_conditions': [],
+        }]
+    return []
