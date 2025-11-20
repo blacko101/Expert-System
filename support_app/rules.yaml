@@ -1,0 +1,30 @@
+# Sample exported rules (minimal subset recreated)
+- id: 1
+  name: "Slow Network — High Latency"
+  confidence: 0.65
+  evidence: "High ping latency detected"
+  remedy: "Restart router, test wired connection, check ISP congestion."
+  conditions:
+    - type: ping_latency
+      op: ">="
+      value: 200
+
+- id: 3
+  name: "Router/Gateway Failure"
+  confidence: 0.95
+  evidence: "Cannot ping gateway while connected to network"
+  remedy: "Power-cycle router, check modem-to-router link and cables."
+  conditions:
+    - type: gateway_ping
+      op: "=="
+      value: "fail"
+    - type: wifi_connected
+      op: "=="
+      value: true
+
+- id: 100
+  name: "Insufficient Data to Diagnose"
+  confidence: 0.2
+  evidence: "Not enough facts supplied to identify root cause"
+  remedy: "Collect more diagnostics (ping, speedtest, temps, logs)."
+  conditions: []
