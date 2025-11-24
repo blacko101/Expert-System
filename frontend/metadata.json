@@ -1,0 +1,4 @@
+{
+  "name": "NetWiz - AI Expert System Interface",
+  "description": "A user-friendly frontend for technical expert systems. It translates natural language complaints into technical parameters using Gemini."
+}
